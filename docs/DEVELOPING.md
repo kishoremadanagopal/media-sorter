@@ -7,7 +7,7 @@ GitHub builds `MediaSorter-Setup-<version>.exe` on its own Windows machines
 
 - **Test build:** **Actions → Build Windows installer → Run workflow**. After about 5 minutes,
   download **MediaSorter-Setup-…** under *Artifacts* (it arrives inside a .zip).
-- **Public release:** **Releases → Draft a new release → tag `v1.1.0` → Publish**.
+- **Public release:** **Releases → Draft a new release → tag `v1.1.0` → Publish release**.
   The installer is built and attached to the release automatically.
 
 ## Releasing a new version

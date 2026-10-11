@@ -3,7 +3,7 @@
 #
 # How to run it:
 #   * Any time:  GitHub > Actions > "Build Windows installer" > Run workflow
-#   * Releases:  create a release with a tag like v1.0.0 and the installer is attached to it automatically
+#   * Releases:  publish a release with a tag like v1.1.0 and the installer is attached to it automatically
 # The finished Setup.exe appears under the run's "Artifacts" (and on the release page).
 #
 # Signing with Microsoft Artifact Signing turns on by itself once these are added in
@@ -16,8 +16,8 @@ name: Build Windows installer
 
 on:
   workflow_dispatch:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
 
 permissions:
   contents: write   # attach the installer to a release
