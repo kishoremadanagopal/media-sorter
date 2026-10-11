@@ -1,89 +1,84 @@
-# Media Sorter
+<p align="center">
+  <img src="assets/icon.png" width="96" alt="Media Sorter icon">
+</p>
 
-Sort photos and videos into folders **by day, month or year**, **by location**, or **both**.
-Made by **Kishore Madanagopal** · https://github.com/kishoremadanagopal
+<h1 align="center">Media Sorter</h1>
+
+<p align="center">
+  A free Windows app that sorts your photos and videos into folders by <b>day, month or year</b>, by <b>place</b>, or <b>both</b>.<br>
+  Works offline. Never touches your originals.
+</p>
+
+<p align="center">
+  <a href="https://github.com/kishoremadanagopal/media-sorter/releases/latest"><b>⬇ Download for Windows</b></a>
+</p>
 
 ---
 
-## For users: installing
+## Why
 
-1. Download **`MediaSorter-Setup-1.1.0.exe`**.
+Phone backups end up as thousands of files named `IMG_0412.jpg`. Finding the photos from one trip means scrolling forever.
+Media Sorter reads when and where each photo and video was taken, and files them for you:
+
+```
+Goa Trip\
+├── 2026-10-08\
+│   ├── Calangute\
+│   └── Panaji\
+└── 2026-10-09\
+    ├── Anjuna\
+    └── Unknown Location\
+```
+
+## Install
+
+1. Download **MediaSorter-Setup** from the [latest release](https://github.com/kishoremadanagopal/media-sorter/releases/latest).
 2. Double-click it → **Next** → **Install** → **Finish**.
 
-That's all. No Python or other software is needed, and Windows won't ask for admin permission.
-Media Sorter appears in the Start menu (and on the desktop if you ticked the box).
-To remove it: **Settings → Apps → Media Sorter → Uninstall**.
+No other software needed, and no admin permission. Windows 10 and 11.
 
-If Windows shows "Windows protected your PC", click **More info → Run anyway**.
-(This goes away once the app is signed and more people have installed it. See `SIGNING.md`.)
+> **"Windows protected your PC"?** The app isn't signed by a company yet, so Windows doesn't recognise it.
+> Click **More info → Run anyway**.
 
----
+To remove it: **Settings → Apps → Media Sorter → Uninstall**. Your sorted photos stay where they are.
 
-## For you (the developer): getting the Setup.exe — no Python, no command window
+## How to use
 
-GitHub builds the installer for you on its own Windows computers.
+| 1. Pick a folder | 2. Choose how to sort | 3. Done |
+|---|---|---|
+| ![Choose folder](docs/screenshots/1-choose-folder.png) | ![Sort options](docs/screenshots/2-sort-options.png) | ![Done](docs/screenshots/3-done.png) |
 
-**One-time setup (in your web browser):**
-1. Sign in at **github.com** → **New repository** → name it `media-sorter` → **Create repository**.
-   (Public is free with unlimited builds. Private works too, with a monthly free allowance.)
-2. On the new repository page, click **uploading an existing file**.
-3. Open the unzipped `MediaSorter` folder on your PC, select **everything inside it**
-   (including the `.github` folder) and drag it into the browser window → **Commit changes**.
+1. **Source folder:** pick the folder with your photos and videos. It counts them for you.
+2. **Save location:** choose where the new folder goes and give it a name.
+3. **Sort options:** by date (group by day, month or year), by location, or both, in either order. Copy (recommended) or move.
+4. **Start sorting:** see the progress, then a summary and a preview of the new folders.
 
-**Each time you want a Setup.exe:**
-1. Open your repository → **Actions** tab → **Build Windows installer** → **Run workflow**.
-2. Wait about 5 minutes for the green tick, open the run, and download **MediaSorter-Setup-…** under *Artifacts*.
-   (GitHub delivers it inside a .zip; the Setup.exe is inside.)
+## Features
 
-**To publish a version for others:** repository → **Releases** → **Draft a new release** → tag `v1.1.0` →
-**Publish**. The installer is built and attached to the release page automatically, ready to share.
+- **Reads the file's own details:** the date and GPS stored inside photos (EXIF) and phone videos.
+  No date inside? It uses the date in the file name (`IMG-20261009-WA0001.jpg`), then the file's "Date modified".
+- **Place names offline:** GPS is matched to the nearest town on your PC. Nothing is uploaded.
+- **Safe:** Copy mode never changes your originals. Name clashes become `photo (1).jpg`. Identical files are skipped,
+  so running it twice makes no duplicates. You can cancel at any time.
+- **A log of everything:** each run saves a CSV listing where every file went and how its date was found.
+- **Formats:** JPG, PNG, HEIC (iPhone), WEBP, TIFF, GIF, BMP, common RAW · MP4, MOV, M4V, 3GP, AVI, MKV, WMV, MTS.
 
-**New version:** change `__version__` in `media_sorter/__init__.py`, upload the changed files, and run again.
+Files without GPS go into **Unknown Location**. WhatsApp and many apps remove GPS from photos, so this is normal.
 
-**Signing with your name:** follow `SIGNING.md` once (Microsoft Artifact Signing, $9.99/month).
-After that, every build is signed automatically: the app, its uninstaller and the Setup.exe.
+## Built with Claude
 
-**License:** MIT (see `LICENSE`). Open source, free for anyone to use and change.
+I built Media Sorter entirely with [Claude](https://claude.ai), without writing a line of code myself:
+I described what I wanted, tested it, reported bugs, and Claude explained and fixed them.
 
----
+## Contributing
 
-## How it works
+Ideas and bug reports are welcome. Please [open an issue](https://github.com/kishoremadanagopal/media-sorter/issues).
+Coming next: sorting documents (PDF, Word, Excel) by type.
+To build the app yourself, see [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
-| What | Where it looks, in order |
-|---|---|
-| **Date** | 1. Photo data (EXIF) or video data inside the file → 2. A date in the file name (`IMG-20261009-WA0001.jpg`) → 3. The file's "Date modified" |
-| **Place** | GPS inside the file → nearest town, looked up **offline**. Nothing is uploaded. |
+## License
 
-Files without GPS go into **Unknown Location** (WhatsApp and many apps remove GPS).
+[MIT](LICENSE). Free to use, share and change.
+Made by [Kishore Madanagopal](https://github.com/kishoremadanagopal).
 
-**Supported:** JPG, PNG, HEIC/HEIF, WEBP, TIFF, GIF, BMP, common RAW · MP4, MOV, M4V, 3GP (date + GPS), AVI, MKV, WMV, MTS (date from name / modified).
-
-**Safety:** Copy mode never touches originals · name clashes become `name (1).jpg` · identical files are skipped,
-so running twice makes no duplicates · every run writes a CSV log in the new folder · Cancel any time.
-
-## Project files
-
-```
-main.py                         starts the app
-media_sorter/ui.py              the wizard window and About box
-media_sorter/engine.py          scanning, folder plan, copy/move, log
-media_sorter/metadata.py        photo dates/GPS, file-name dates
-media_sorter/mp4meta.py         video dates/GPS (MP4/MOV)
-media_sorter/geocode.py         offline GPS → town name
-media_sorter/__init__.py        version, app name, your name and GitHub link
-packaging/installer.nsi         the Setup.exe installer
-packaging/make_version_info.py  puts your name in the .exe's Properties
-.github/workflows/              the automatic Windows build
-build.bat                       optional: build on your own PC instead of GitHub
-tests/                          sample-file generator and UI screenshot test
-```
-
-## Known limits / Version 2 ideas
-
-- Place names are the nearest town, so photos near a big city's edge may get a suburb's name.
-- Planned for V2: documents (PDF, Word, Excel…) sorted by type, plus UI changes.
-
-## Credits
-
-Town data: [GeoNames](https://www.geonames.org/) (CC BY 4.0), via the `reverse_geocoder` project.
-UI: [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter). Images: Pillow, pillow-heif.
+Town data: [GeoNames](https://www.geonames.org/) (CC BY 4.0) · UI: [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) · Images: Pillow, pillow-heif.

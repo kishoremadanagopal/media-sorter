@@ -7,7 +7,7 @@
 # The finished Setup.exe appears under the run's "Artifacts" (and on the release page).
 #
 # Signing with Microsoft Artifact Signing turns on by itself once these are added in
-# GitHub > Settings > Secrets and variables > Actions (see SIGNING.md):
+# GitHub > Settings > Secrets and variables > Actions (see docs/SIGNING.md):
 #   Variables: ARTIFACT_SIGNING_ENDPOINT, ARTIFACT_SIGNING_ACCOUNT, ARTIFACT_SIGNING_PROFILE
 #   Secrets:   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
 # Until then, the build still works and makes an unsigned installer.
