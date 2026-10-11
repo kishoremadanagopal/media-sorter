@@ -1,0 +1,185 @@
+# Builds (and signs) MediaSorter-Setup-<version>.exe on GitHub's own Windows computers.
+# Nobody needs Python installed: not you, not your users.
+#
+# How to run it:
+#   * Any time:  GitHub > Actions > "Build Windows installer" > Run workflow
+#   * Releases:  create a release with a tag like v1.0.0 and the installer is attached to it automatically
+# The finished Setup.exe appears under the run's "Artifacts" (and on the release page).
+#
+# Signing with Microsoft Artifact Signing turns on by itself once these are added in
+# GitHub > Settings > Secrets and variables > Actions (see SIGNING.md):
+#   Variables: ARTIFACT_SIGNING_ENDPOINT, ARTIFACT_SIGNING_ACCOUNT, ARTIFACT_SIGNING_PROFILE
+#   Secrets:   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+# Until then, the build still works and makes an unsigned installer.
+
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # attach the installer to a release
+  id-token: write   # secure, password-free login to Azure for signing
+
+env:
+  SIGN: ${{ vars.ARTIFACT_SIGNING_ACCOUNT != '' }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    # One fixed name for Azure to trust, whether the build was started from main or from a release tag
+    environment: signing
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v7
+
+      - name: Set up Python (only on the build machine)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install the libraries
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Read the version number
+        id: ver
+        shell: pwsh
+        run: |
+          $v = python -c "import media_sorter; print(media_sorter.__version__)"
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Building version $v (signing: $env:SIGN)"
+
+      - name: Add publisher details to the app (name, version, copyright)
+        run: python packaging/make_version_info.py
+
+      - name: Build MediaSorter.exe
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed `
+            --name MediaSorter `
+            --icon assets/icon.ico `
+            --version-file build/version_info.txt `
+            --add-data "assets;assets" `
+            --add-data "media_sorter/data;media_sorter/data" `
+            --collect-all customtkinter `
+            --collect-all pillow_heif `
+            --hidden-import PIL._tkinter_finder `
+            main.py
+
+      - name: Build the uninstaller (so it can be signed too)
+        shell: pwsh
+        run: |
+          $nsis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          if (-not (Test-Path $nsis)) { choco install nsis -y --no-progress | Out-Null }
+          & $nsis /DVERSION=${{ steps.ver.outputs.version }} /DUNINSTALLER_ONLY packaging\installer.nsi
+          if ($LASTEXITCODE -ne 0) { throw "Uninstaller build failed" }
+          Start-Process -FilePath "dist\make-uninstaller.exe" -Wait
+          if (-not (Test-Path "dist\uninstaller\Uninstall.exe")) { throw "Uninstall.exe was not created" }
+
+      # ---------------- signing, part 1: the app and its uninstaller ----------------
+      - name: Log in to Azure (for signing)
+        if: env.SIGN == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign MediaSorter.exe and Uninstall.exe
+        if: env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files: |
+            ${{ github.workspace }}\dist\MediaSorter\MediaSorter.exe
+            ${{ github.workspace }}\dist\uninstaller\Uninstall.exe
+          description: Media Sorter
+          description-url: https://github.com/kishoremadanagopal
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: false
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+
+      - name: Check the built app works
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist\MediaSorter\MediaSorter.exe" -ArgumentList "--selftest","selftest.txt" -Wait -PassThru
+          Get-Content selftest.txt
+          if ($p.ExitCode -ne 0) { throw "Self-test failed" }
+
+      - name: Build the installer (Setup.exe)
+        shell: pwsh
+        run: |
+          $nsis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          & $nsis /DVERSION=${{ steps.ver.outputs.version }} /DPREBUILT_UNINSTALLER packaging\installer.nsi
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+
+      # ---------------- signing, part 2: the Setup.exe ----------------
+      - name: Sign the Setup.exe
+        if: env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files: ${{ github.workspace }}\dist\MediaSorter-Setup-${{ steps.ver.outputs.version }}.exe
+          description: Media Sorter Setup
+          description-url: https://github.com/kishoremadanagopal
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: false
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+
+      - name: Show who signed the files
+        shell: pwsh
+        run: |
+          $files = @("dist\MediaSorter\MediaSorter.exe", "dist\uninstaller\Uninstall.exe",
+                     "dist\MediaSorter-Setup-${{ steps.ver.outputs.version }}.exe")
+          foreach ($f in $files) {
+            $s = Get-AuthenticodeSignature $f
+            $who = if ($s.SignerCertificate) { $s.SignerCertificate.Subject } else { "(not signed)" }
+            Write-Host ("{0,-45} {1,-10} {2}" -f (Split-Path $f -Leaf), $s.Status, $who)
+            if ($env:SIGN -eq 'true' -and $s.Status -ne 'Valid') { throw "$f is not properly signed" }
+          }
+
+      - name: Make the installer downloadable
+        uses: actions/upload-artifact@v7
+        with:
+          name: MediaSorter-Setup-${{ steps.ver.outputs.version }}
+          path: dist/MediaSorter-Setup-*.exe
+          if-no-files-found: error
+
+      - name: Attach the installer to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "Media Sorter $tag" --notes "Download MediaSorter-Setup and double-click it to install." }
+          gh release upload $tag (Get-ChildItem dist\MediaSorter-Setup-*.exe).FullName --clobber
